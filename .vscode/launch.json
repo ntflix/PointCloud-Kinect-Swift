@@ -29,7 +29,12 @@
         {
             "type": "swift",
             "request": "launch",
-            "args": [],
+            "args": [
+                "--seconds",
+                "5",
+                "--output",
+                "${workspaceFolder:PointCloud}/frames"
+            ],
             "cwd": "${workspaceFolder:PointCloud}",
             "name": "Release PointCloud",
             "target": "PointCloud",
