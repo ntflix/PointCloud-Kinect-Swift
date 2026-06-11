@@ -26,26 +26,26 @@ enum PLYWriter {
         precondition(count <= points.count)
 
         let header = makeHeader(vertexCount: count)
-        let headerBytes = Array(header.utf8)
 
         let bytesPerVertex = 15  // 3×float32 + 3×uint8
-        var body = [UInt8]()
-        body.reserveCapacity(count * bytesPerVertex)
+        var data = Data()
+        data.reserveCapacity(count * bytesPerVertex)
+        data.append(contentsOf: header.utf8)
 
         for i in 0..<count {
             let p = points[i]
-            appendFloat32(&body, p.x)
-            appendFloat32(&body, p.y)
-            appendFloat32(&body, p.z)
-            body.append(p.r)
-            body.append(p.g)
-            body.append(p.b)
+            var x = p.x.bitPattern.littleEndian
+            var y = p.y.bitPattern.littleEndian
+            var z = p.z.bitPattern.littleEndian
+            withUnsafeBytes(of: &x) { data.append(contentsOf: $0) }
+            withUnsafeBytes(of: &y) { data.append(contentsOf: $0) }
+            withUnsafeBytes(of: &z) { data.append(contentsOf: $0) }
+            data.append(p.r)
+            data.append(p.g)
+            data.append(p.b)
         }
 
-        var fileData = Data(headerBytes)
-        fileData.append(contentsOf: body)
-
-        try fileData.write(to: url, options: .atomic)
+        try data.write(to: url, options: .atomic)
     }
 
     // MARK: - Helpers

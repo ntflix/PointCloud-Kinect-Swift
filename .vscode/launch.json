@@ -5,10 +5,10 @@
             "request": "launch",
             "args": [],
             "env": {
-                "LIBFREENECT2_PIPELINE": "cpu"
+                "LIBFREENECT2_PIPELINE": "cl"
             },
             "cwd": "${workspaceFolder:PointCloud}",
-            "name": "Debug PointCloud (CPU)",
+            "name": "Debug PointCloud (CL)",
             "target": "PointCloud",
             "configuration": "debug",
             "preLaunchTask": "swift: Build Debug PointCloud"
@@ -16,19 +16,9 @@
         {
             "type": "swift",
             "request": "launch",
-            "args": [],
             "env": {
-                "LIBFREENECT2_PIPELINE": "gl"
+                "LIBFREENECT2_PIPELINE": "cl"
             },
-            "cwd": "${workspaceFolder:PointCloud}",
-            "name": "Debug PointCloud (GL)",
-            "target": "PointCloud",
-            "configuration": "debug",
-            "preLaunchTask": "swift: Build Debug PointCloud"
-        },
-        {
-            "type": "swift",
-            "request": "launch",
             "args": [
                 "--seconds",
                 "5",
@@ -40,6 +30,16 @@
             "target": "PointCloud",
             "configuration": "release",
             "preLaunchTask": "swift: Build Release PointCloud"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:PointCloud}",
+            "name": "Debug PointCloud",
+            "target": "PointCloud",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug PointCloud"
         }
     ]
 }

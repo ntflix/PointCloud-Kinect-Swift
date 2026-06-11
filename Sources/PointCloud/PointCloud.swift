@@ -36,7 +36,8 @@ struct PointCloud {
             i += 1
         }
 
-        // ── Create output directory ───────────────────────────────────────
+        // ── Create output directory and write queue ─────────────────────────────
+        let writeQueue = DispatchQueue(label: "ply.writer", qos: .userInitiated)
         do {
             try FileManager.default.createDirectory(
                 at: outputDir,
@@ -90,13 +91,24 @@ struct PointCloud {
 
             if count > 0 {
                 let filename = String(format: "frame_%04d.ply", savedFrames)
-                let url = outputDir.appendingPathComponent(filename)
-                do {
-                    try PLYWriter.writeBinary(points: points, count: count, to: url)
-                    savedFrames += 1
-                } catch {
-                    fputs("Failed to write \(filename): \(error)\n", stderr)
+                let snapshot = Array(points.prefix(count))  // Copy to avoid mutability issues
+                let frameCount = count
+                var outURL: URL
+                if #available(macOS 13.0, *) {
+                    outURL = outputDir.appending(
+                        path: String(format: "frame_%04d.ply", savedFrames))
+                } else {
+                    outURL = outputDir.appendingPathComponent(
+                        String(format: "frame_%04d.ply", savedFrames))
                 }
+                writeQueue.async {
+                    do {
+                        try PLYWriter.writeBinary(points: snapshot, count: frameCount, to: outURL)
+                    } catch {
+                        fputs("Failed to write \(filename): \(error)\n", stderr)
+                    }
+                }
+                savedFrames += 1
             }
 
             frameIndex += 1
