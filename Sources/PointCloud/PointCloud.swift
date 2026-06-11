@@ -3,7 +3,53 @@ import Foundation
 
 @main
 struct PointCloud {
+
     static func main() {
+        // ── Parse args ───────────────────────────────────────────────────
+        let args = CommandLine.arguments
+        var captureDuration: Double = 5.0
+        var outputDir = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+
+        var i = 1
+        while i < args.count {
+            switch args[i] {
+            case "--seconds", "-s":
+                i += 1
+                if i < args.count, let v = Double(args[i]) {
+                    captureDuration = v
+                } else {
+                    fputs("Expected a number after \(args[i - 1])\n", stderr)
+                    exit(1)
+                }
+            case "--output", "-o":
+                i += 1
+                if i < args.count {
+                    outputDir = URL(fileURLWithPath: args[i])
+                } else {
+                    fputs("Expected a path after \(args[i - 1])\n", stderr)
+                    exit(1)
+                }
+            default:
+                fputs("Unknown argument: \(args[i])\n", stderr)
+                exit(1)
+            }
+            i += 1
+        }
+
+        // ── Create output directory ───────────────────────────────────────
+        do {
+            try FileManager.default.createDirectory(
+                at: outputDir,
+                withIntermediateDirectories: true
+            )
+        } catch {
+            fputs("Cannot create output directory '\(outputDir.path)': \(error)\n", stderr)
+            exit(1)
+        }
+
+        print("Capturing for \(captureDuration)s → \(outputDir.path)")
+
+        // ── Open device ───────────────────────────────────────────────────
         guard let dev = kinect2_open_default() else {
             fputs("Failed to open Kinect v2 device\n", stderr)
             exit(1)
@@ -16,82 +62,70 @@ struct PointCloud {
         }
         defer { kinect2_stop(dev) }
 
+        // ── Per-frame point buffer ────────────────────────────────────────
         let maxPoints = Int(kinect2_depth_width() * kinect2_depth_height())
         var points = Array(
             repeating: kinect2_point_t(x: 0, y: 0, z: 0, r: 0, g: 0, b: 0, a: 0),
             count: maxPoints
         )
 
-        var count = 0
+        // ── Capture loop ──────────────────────────────────────────────────
+        let startTime = Date()
+        var frameIndex = 0
+        var savedFrames = 0
 
-        for frameIndex in 0..<1200 {
-            guard kinect2_wait_frame(dev, 1000) == 0 else {
-                print("frame \(frameIndex): timeout")
+        while Date().timeIntervalSince(startTime) < captureDuration {
+            guard kinect2_wait_frame(dev, 2000) == 0 else {
+                fputs("frame \(frameIndex): timeout\n", stderr)
+                frameIndex += 1
                 continue
             }
 
-            var row: Int32 = -1
-            var col: Int32 = -1
-            var rawDepth: Float = 0
-            var x: Float = 0
-            var y: Float = 0
-            var z: Float = 0
-
-            if kinect2_debug_first_valid_xyz_pixel(dev, &row, &col, &rawDepth, &x, &y, &z) == 0 {
-                print(
-                    "first valid XYZ pixel: row=\(row) col=\(col) rawDepth=\(rawDepth) xyz=(\(x), \(y), \(z))"
-                )
-            } else {
-                print("no valid XYZ pixel found")
-            }
-
-            var cx: Float = 0
-            var cy: Float = 0
-            var cz: Float = 0
-            if kinect2_debug_center_xyz(dev, &cx, &cy, &cz) == 0 {
-                print("center xyz=(\(cx), \(cy), \(cz))")
-            }
-
-            let validDepth = Int(kinect2_count_valid_depth_pixels(dev))
-            count = points.withUnsafeMutableBufferPointer { buf in
+            let count = points.withUnsafeMutableBufferPointer { buf in
                 Int(kinect2_get_point_cloud(dev, buf.baseAddress, buf.count, 0))
             }
 
-            print("frame \(frameIndex): validDepth=\(validDepth) validPoints=\(count)")
+            let elapsed = Date().timeIntervalSince(startTime)
+            print(String(format: "[%6.2fs] frame %04d: %d points", elapsed, frameIndex, count))
 
-            if validDepth > 10000 && count > 10000 {
-                break
+            if count > 0 {
+                let filename = String(format: "frame_%04d.ply", savedFrames)
+                let url = outputDir.appendingPathComponent(filename)
+                do {
+                    try PLYWriter.writeBinary(points: points, count: count, to: url)
+                    savedFrames += 1
+                } catch {
+                    fputs("Failed to write \(filename): \(error)\n", stderr)
+                }
             }
+
+            frameIndex += 1
         }
 
-        guard count > 0 else {
-            fputs("No valid points captured\n", stderr)
+        if savedFrames == 0 {
+            fputs("No valid frames captured in \(captureDuration)s\n", stderr)
             exit(2)
         }
 
-        do {
-            try writePLY(points: points, count: count, to: URL(fileURLWithPath: "frame.ply"))
-            print("Wrote frame.ply with \(count) points")
-        } catch {
-            fputs("PLY write failed: \(error)\n", stderr)
-            exit(3)
-        }
+        print("Done. \(savedFrames) frames written to \(outputDir.path)")
     }
 
+    // ── PLY writer ────────────────────────────────────────────────────────
     static func writePLY(points: [kinect2_point_t], count: Int, to url: URL) throws {
-        var text = """
-            ply
-            format ascii 1.0
-            element vertex \(count)
-            property float x
-            property float y
-            property float z
-            property uchar red
-            property uchar green
-            property uchar blue
-            end_header
+        // Pre-allocate: header ~120 bytes + ~40 bytes per point
+        var text = String()
+        text.reserveCapacity(128 + count * 40)
 
-            """
+        text += "ply\n"
+        text += "format ascii 1.0\n"
+        text += "element vertex \(count)\n"
+        text += "property float x\n"
+        text += "property float y\n"
+        text += "property float z\n"
+        text += "property uchar red\n"
+        text += "property uchar green\n"
+        text += "property uchar blue\n"
+        text += "end_header\n"
 
         for i in 0..<count {
             let p = points[i]
