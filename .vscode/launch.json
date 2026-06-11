@@ -1,0 +1,24 @@
+{
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:PointCloud}",
+            "name": "Debug PointCloud",
+            "target": "PointCloud",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug PointCloud"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:PointCloud}",
+            "name": "Release PointCloud",
+            "target": "PointCloud",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release PointCloud"
+        }
+    ]
+}
