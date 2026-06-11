@@ -4,8 +4,24 @@
             "type": "swift",
             "request": "launch",
             "args": [],
+            "env": {
+                "LIBFREENECT2_PIPELINE": "cpu"
+            },
             "cwd": "${workspaceFolder:PointCloud}",
-            "name": "Debug PointCloud",
+            "name": "Debug PointCloud (CPU)",
+            "target": "PointCloud",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug PointCloud"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "env": {
+                "LIBFREENECT2_PIPELINE": "gl"
+            },
+            "cwd": "${workspaceFolder:PointCloud}",
+            "name": "Debug PointCloud (GL)",
             "target": "PointCloud",
             "configuration": "debug",
             "preLaunchTask": "swift: Build Debug PointCloud"
