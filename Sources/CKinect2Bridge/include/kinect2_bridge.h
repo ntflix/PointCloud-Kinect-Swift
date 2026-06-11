@@ -22,6 +22,9 @@ size_t kinect2_get_point_cloud(kinect2_device_t *dev,
                                kinect2_point_t *out_points, size_t max_points,
                                int include_invalid);
 
+int kinect2_depth_width(void);
+int kinect2_depth_height(void);
+
 #ifdef __cplusplus
 }
 #endif

@@ -9,7 +9,7 @@ let package = Package(
     targets: [
         .systemLibrary(
             name: "Clibfreenect2",
-            pkgConfig: "libfreenect2",
+            pkgConfig: "freenect2",
             providers: [
                 .brew(["libusb", "glfw", "jpeg-turbo"]),
                 .apt(["libusb-1.0-0-dev", "libglfw3-dev", "libturbojpeg0-dev"]),
